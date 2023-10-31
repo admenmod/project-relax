@@ -29,7 +29,7 @@ for(let id in canvas.layers) {
 }
 
 
-export const touches = new TouchesController(canvas);
+export const touches = new TouchesController(canvas, e => e.currentTarget === e.target);
 
 
 export const gm = new class GameManager extends EventDispatcher {

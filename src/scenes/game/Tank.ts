@@ -6,7 +6,7 @@ import { PhysicsBox2DItem } from '@/scenes/PhysicsBox2DItem';
 import { Sprite } from '@/scenes/nodes/Sprite';
 import { b2Shapes, b2Vec2 } from '@/modules/Box2DWrapper';
 import type { Joystick } from '@/scenes/gui/Joystick';
-import { roundLoop } from '@ver/helpers';
+import { math as Math } from '@ver/helpers';
 
 
 export class Tank extends PhysicsBox2DItem {
@@ -74,7 +74,7 @@ export class Tank extends PhysicsBox2DItem {
 
 			const a = (Math.abs(angle) < Math.PI/2 ? Math.abs(angle) : -Math.PI/2 / Math.abs(angle)) * 0.000015 * dira;
 			let v = value * dir * (dir > 0 ? 0.0003 : 0.0001);
-			v *= (Math.abs(roundLoop(Math.abs(angle) - Math.PI/2)) < Math.PI/10 ? 0 : 1);
+			v *= (Math.abs(Math.mod(Math.abs(angle) - Math.PI/2)) < Math.PI/10 ? 0 : 1);
 
 			this.b2_angularVelocity += a;
 			this.b2_velosity.x += v * Math.cos(this.b2_angle - Math.PI/2);
