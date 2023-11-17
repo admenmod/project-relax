@@ -1,17 +1,11 @@
 import { Event, EventDispatcher } from '@ver/events';
 import { codeShell } from '@ver/codeShell';
+import { QueueMachine } from '@/modules/QueueMachine';
 
-
-const TypeRequest = 0;
-const TypeResponse = 1;
-
-type TypeRequest = typeof TypeRequest;
-type TypeResponse = typeof TypeResponse;
 
 type action_type = 'onclick' | 'delay';
 
 interface IRespons {
-	type: TypeResponse;
 	action_type: action_type;
 	text: string;
 	name?: string;
@@ -27,7 +21,6 @@ const color = (text: string, color: string) => {
 
 const text = (str: TemplateStringsArray, ...args: any[]): IRespons => {
 	return {
-		type: TypeResponse,
 		action_type: 'onclick',
 		text: String.raw(str, ...args)
 	};
@@ -42,7 +35,6 @@ class Person {
 
 	public say(str: TemplateStringsArray, ...args: any[]): IRespons {
 		return {
-			type: TypeResponse,
 			action_type: 'onclick',
 			name: this.name,
 			color: this.color,
@@ -74,30 +66,11 @@ export const codeRen = (code: string) => codeShell<Gen>(code, env, {
 });
 
 
-export interface IOrder<T extends TypeRequest | TypeResponse> {
-	type: T;
-	method: string;
-	args: any[];
-}
+interface IOrder extends QueueMachine.IDefaultOrder {}
 
-export class Server extends EventDispatcher {
-	public '@move' = new Event<Server, [IOrder<TypeResponse>, boolean | void]>(this);
-
-	public queue: IOrder<TypeResponse>[] = [];
-
-	public move(listener: Record<string, (...args: any[]) => boolean | void>): boolean | void {
-		const q = this.queue.shift();
-		if(!q) return;
-
-		const res = listener[q.method]?.(...q.args);
-
-		this['@move'].emit(q, res);
-
-		return res;
-	}
-
+export class QueueMachineText extends QueueMachine<IOrder, boolean | void> {
 	public parse({ text, name, color }: IRespons): void {
-		this.queue.push({ type: 1, method: 'name', args: [name, color] });
+		this.push({ method: 'name', args: [name, color] });
 
 		const cmds = text.split(/\n\n/);
 
@@ -105,8 +78,8 @@ export class Server extends EventDispatcher {
 			const m = cmd.split(/\(w\)/);
 
 			for(let i = 0; i < m.length; i++) {
-				if(i === 0) this.queue.push({ type: 1, method: 'write', args: [m[i]] });
-				else this.queue.push({ type: 1, method: 'append', args: [m[i]] });
+				if(i === 0) this.queue.push({ method: 'write', args: [m[i]] });
+				else this.queue.push({ method: 'append', args: [m[i]] });
 			}
 		}
 

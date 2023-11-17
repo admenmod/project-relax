@@ -8,16 +8,6 @@ import { CanvasItem } from '@/scenes/CanvasItem';
 export const PARENT_CACHE = Symbol('PARENT_CACHE');
 
 export class Node2D extends CanvasItem {
-	public set '%position'(v: Vector2) { this.position.set(v); }
-	public get '%position'(): Vector2 { return this.position.buf(); }
-
-	public set '%rotation'(v: number) { this.rotation = v; }
-	public get '%rotation'(): number { return this.rotation; }
-
-	public set '%scale'(v: Vector2) { this.scale.set(v); }
-	public get '%scale'(): Vector2 { return this.scale.buf(); }
-
-
 	protected [PARENT_CACHE]: Node2D[] = [];
 
 
@@ -31,9 +21,9 @@ export class Node2D extends CanvasItem {
 	public based_on_camera_scale: boolean = true;
 
 
-	public readonly position = new Vector2();
-	public readonly pivot_offset = new Vector2();
-	public readonly scale = new Vector2(1, 1);
+	public position = new Vector2();
+	public pivot_offset = new Vector2();
+	public scale = new Vector2(1, 1);
 
 	protected _rotation: number = 0;
 	public get rotation(): number { return this._rotation; }

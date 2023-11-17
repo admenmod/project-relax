@@ -1,24 +1,27 @@
-/*
-[alpha-v1.0.2]
+const { Event } = await require('events');
 
-Программирование генома клеток
-Все новые клетки получают новый геном
-Старые клетки остаются без изменений
 
-console.log для дебага
-*/
+const RULES_ENAM = {
+	HARVESTER: 'harvester'
+};
 
-while(true) {
-	// if(energy < 15) {
-	// 	yield* idle(2);
-	// 	continue;
-	// }
+console.log({ RULES_ENAM });
 
-	yield* lookAround();
 
-	if(around.forward) yield* turnRight(2);
+module.exports = { aa: 33 };
 
-	yield* moveForward();
+module.exports.loop = async () => {
+	let list = await game.getUnitsInfo();
 
-	if(energy > 15 && isBudoff) yield* budoff();
-}
+	if(list.length) {
+		list[0].moveTo(new Vector2(2, 4));
+	}
+
+	// Game.spawns['Spawn1'].buildUnit([WORK, CARRY, MOVE], 'Harvester1', {
+	// 	memory: {
+	// 		rule: RULES_ENAM.HARVESTER
+	// 	}
+	// });
+	//
+	// Game.units['Harvester1'];
+};

@@ -1,0 +1,3 @@
+importScripts('./codeShell');
+
+import('./main');

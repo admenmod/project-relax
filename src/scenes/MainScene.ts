@@ -12,7 +12,9 @@ import { world } from '@/modules/World';
 import { Core, Humer } from '@/modules/Eve';
 import { Menu } from '@/modules/HTMLMenuItemElement';
 
-import { Layout, Server, codeRen } from '@/engine/Layout';
+import { Layout, QueueMachineText, codeRen } from '@/engine/Layout';
+
+import '@/modules/ServerCodeShell';
 
 
 export class MainScene extends Node2D {
@@ -37,6 +39,7 @@ export class MainScene extends Node2D {
 	protected async _init(this: MainScene): Promise<void> {
 		await super._init();
 
+
 		gm.viewport.position.set(200, 200);
 
 		world.init();
@@ -50,7 +53,7 @@ export class MainScene extends Node2D {
 		gm.on('resize', updateOnResize);
 
 
-		const server = new Server();
+		const lserver = new QueueMachineText();
 		const layout = new Layout().use(canvas);
 
 		const listener = {
@@ -69,20 +72,19 @@ export class MainScene extends Node2D {
 		};
 
 		const serverHander = () => {
-			if(!server.queue.length) {
+			if(!lserver.queue.length) {
 				layout.root.hidden = true;
 				layout.root.onclick = null;
 				mainLoop.start();
 			}
 
-			while(server.move(listener)) {}
+			while(lserver.move(listener)) {}
 		};
 
 		const execScript = async (filename: string) => {
 			const text = await fetch(`/text/${filename}.js`).then(data => data.text());
-			const ren = codeRen(text);
 
-			server.use(ren());
+			lserver.use(codeRen(text)());
 
 			mainLoop.stop();
 
@@ -95,35 +97,60 @@ export class MainScene extends Node2D {
 
 
 		world.once('press:structure', s => {
-			if(!server.queue.length) execScript('help-core-structure');
+			if(!lserver.queue.length) execScript('help-core-structure');
+		});
+
+		world.once('collision:o-o', (a, b) => {
+			if(!lserver.queue.length) execScript('help-object-collision');
+
+			this.anims.push(new Animation(generateAnimation(b as Humer)));
+			this.anims.forEach(i => i.play(true));
 		});
 
 
+		function* ccc(cb: (c: number) => any, time: number, step: number, m: (c: number) => number): Generator<number, void, number> {
+			let t = 0;
+
+			cb(0);
+			while(t < time) {
+				cb(m(t / time));
+				t += yield step;
+			}
+			cb(1);
+		}
+
+		const m = (c: number) => c ** 1;
+
 		const generateAnimation = (h: Humer): Animation.Generator => function*() {
+			let isF = true;
+			const fr = h.radius;
+			const d = 2;
+
 			yield 0;
 
-			h.pos.x += yield 10;
+			while(true) {
+				if(isF) yield* ccc(c => {
+					h.radius = fr + d * c;
+				}, 300, 20, m);
+				else yield* ccc(c => {
+					h.radius = (fr + d) - d*c;
+				}, 300, 20, m);
+
+				isF = !isF;
+			}
 		};
-	}
 
-	public anims: Animation[] = [];
 
-	public $: Record<string, any> = {};
 
-	protected _ready(this: MainScene): void {
 		const core = world.create(new Core(vec2(0, 0)));
 		const core2 = world.create(new Core(vec2(200, 0)));
 
-		const humer = core.build(Humer);
-		const humer2 = core2.build(Humer);
+		const humer = core.buildUnit(Humer);
+		const humer2 = core2.buildUnit(Humer);
 
 
 		const menu = new Menu();
 		canvas.append(menu.$root);
-
-
-		this.$.core = core;
-		this.$.humer = humer;
 
 
 		world.on('press:structure', core => {
@@ -141,6 +168,12 @@ export class MainScene extends Node2D {
 		}));
 	}
 
+	public anims: Animation[] = [];
+
+	protected _ready(this: MainScene): void {
+		;
+	}
+
 	protected _process(this: MainScene, dt: number): void {
 		this.motionByTouch.update(dt, touches, gm.viewport.position);
 
@@ -149,15 +182,13 @@ export class MainScene extends Node2D {
 
 		for(const i of this.anims) i.tick(dt);
 
-		for(const o of world.objects) o instanceof Humer && o.pos.moveTo(o.movetarget, o.speed * dt);
-
 		world.process(dt);
 	}
 
 	protected _draw(this: MainScene, viewport: Viewport): void {
 		const { ctx } = viewport;
 
-		world.draw(viewport);
+		world.render(viewport);
 
 
 		const center = Vector2.ZERO;

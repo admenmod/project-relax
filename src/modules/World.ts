@@ -1,5 +1,4 @@
 import { Vector2 } from '@ver/Vector2';
-import type { Touch } from '@ver/TouchesController';
 import type { Viewport } from '@ver/Viewport';
 import { EventDispatcher, Event } from '@ver/events';
 import { math as Math } from '@ver/helpers';
@@ -79,7 +78,7 @@ export class Container<T extends Base = Base> extends EventDispatcher {
 		const o = this.get(...args);
 		if(!o) return false;
 
-		o.pos = this.pos;
+		o.position = this.pos;
 
 		const stat = Boolean(world.delete(o)) && this.append(o);
 		if(stat) this['@put'].emit(o);
@@ -91,7 +90,7 @@ export class Container<T extends Base = Base> extends EventDispatcher {
 		const o = this.get(...args);
 		if(!o) return false;
 
-		o.pos = this.pos.buf();
+		o.position = this.pos.buf();
 
 		const stat = this.remove(o) && Boolean(world.create(o));
 		if(stat) this['@pull'].emit(o);
@@ -115,7 +114,7 @@ export class Base extends EventDispatcher {
 	public readonly uid: UID = generateUID();
 
 	constructor(
-		public pos: Vector2,
+		public position: Vector2,
 		public bulk: number
 	) { super(); }
 }
@@ -129,12 +128,19 @@ export class Item extends Base {
 }
 
 export class Object extends Base {
+	public mass: number;
+
 	constructor(
 		pos: Vector2,
 		bulk: number,
-		public radius: number,
-		public mass: number = radius ** 2 * Math.PI
-	) { super(pos, bulk); }
+		public radius: number
+	) {
+		super(pos, bulk);
+
+		this.mass = radius ** 2 * Math.PI;
+	}
+
+	public process(dt: number): void {}
 }
 
 export class Structure extends Base {
@@ -169,6 +175,10 @@ export class World extends EventDispatcher {
 	public '@move:object' = new Event<World, [o: Object, ...Event.Args<typeof Input, 'move'>]>(this);
 	public '@move:structure' = new Event<World, [o: Structure, ...Event.Args<typeof Input, 'move'>]>(this);
 
+	public '@collision:o-o' = new Event<World, [a: Object, b: Object]>(this);
+	public '@collision:o-s' = new Event<World, [a: Object, b: Structure]>(this);
+
+
 	public items: Item[] = [];
 	public objects: Object[] = [];
 	public structures: Structure[] = [];
@@ -190,14 +200,14 @@ export class World extends EventDispatcher {
 			for(let i = 0; i < this.structures.length; i++) {
 				const o = this.structures[i];
 				if(
-					pos.x < o.pos.x + o.size.x/2 && pos.x > o.pos.x - o.size.x/2 &&
-					pos.y < o.pos.y + o.size.y/2 && pos.y > o.pos.y - o.size.y/2
+					pos.x < o.position.x + o.size.x/2 && pos.x > o.position.x - o.size.x/2 &&
+					pos.y < o.position.y + o.size.y/2 && pos.y > o.position.y - o.size.y/2
 				) this[`@${type}:structure`].emit(o, pos, local, touch);
 			}
 
 			for(let i = 0; i < this.objects.length; i++) {
 				const o = this.objects[i];
-				if(o.pos.getDistance(pos) < o.radius) this[`@${type}:object`].emit(o, pos, local, touch);
+				if(o.position.getDistance(pos) < o.radius) this[`@${type}:object`].emit(o, pos, local, touch);
 			}
 		};
 
@@ -242,19 +252,23 @@ export class World extends EventDispatcher {
 	}
 
 	public process(dt: number): void {
+		for (let i = 0; i < this.objects.length; i++) this.objects[i].process(dt);
+
 		// object - object
 		for(let i1 = 0; i1 < this.objects.length-1; i1++) {
 			let a = this.objects[i1];
 			for(let i2 = i1+1; i2 < this.objects.length; i2++) {
 				let b = this.objects[i2];
 
-				let diff = a.pos.getDistance(b.pos) - (a.radius + b.radius);
+				let diff = a.position.getDistance(b.position) - (a.radius + b.radius);
 				if(diff < 0) {
 					diff = Math.abs(diff);
 					if(a.mass > b.mass) [a, b] = [b, a];
 					const c = b.mass/a.mass;
-					a.pos.moveAngle(diff - diff/c, b.pos.getAngleRelative(a.pos));
-					b.pos.moveAngle(diff/c, a.pos.getAngleRelative(b.pos));
+					a.position.moveAngle(diff - diff/c, b.position.getAngleRelative(a.position));
+					b.position.moveAngle(diff/c, a.position.getAngleRelative(b.position));
+
+					this['@collision:o-o'].emit(a, b);
 				}
 			}
 		}
@@ -265,24 +279,26 @@ export class World extends EventDispatcher {
 				const b = this.structures[i2];
 
 				const p = new Vector2(
-					Math.max(b.pos.x-b.size.x/2, Math.min(a.pos.x, b.pos.x+b.size.x/2)),
-					Math.max(b.pos.y-b.size.y/2, Math.min(a.pos.y, b.pos.y+b.size.y/2))
+					Math.max(b.position.x-b.size.x/2, Math.min(a.position.x, b.position.x+b.size.x/2)),
+					Math.max(b.position.y-b.size.y/2, Math.min(a.position.y, b.position.y+b.size.y/2))
 				);
 
-				if(a.pos.getDistance(p) < a.radius) {
-					if(Math.abs(b.pos.x-a.pos.x) > Math.abs(b.pos.y-a.pos.y)) {
-						if(a.pos.x < b.pos.x) a.pos.x += (b.pos.x - b.size.x/2) - (a.pos.x+a.radius);
-						else a.pos.x += (b.pos.x + b.size.x/2) - (a.pos.x-a.radius);
+				if(a.position.getDistance(p) < a.radius) {
+					if(Math.abs(b.position.x-a.position.x) > Math.abs(b.position.y-a.position.y)) {
+						if(a.position.x < b.position.x) a.position.x += (b.position.x - b.size.x/2) - (a.position.x+a.radius);
+						else a.position.x += (b.position.x + b.size.x/2) - (a.position.x-a.radius);
 					} else {
-						if(a.pos.y < b.pos.y) a.pos.y += (b.pos.y - b.size.y/2) - (a.pos.y+a.radius);
-						else a.pos.y += (b.pos.y + b.size.y/2) - (a.pos.y-a.radius);
+						if(a.position.y < b.position.y) a.position.y += (b.position.y - b.size.y/2) - (a.position.y+a.radius);
+						else a.position.y += (b.position.y + b.size.y/2) - (a.position.y-a.radius);
 					}
+
+					this['@collision:o-s'].emit(a, b);
 				}
 			}
 		}
 	}
 
-	public draw({ ctx }: Viewport): void {
+	public render({ ctx }: Viewport): void {
 		const DEBAG_UID = false;
 		const ALPHA = 0.2;
 		const COLOR = '#eeee11';
@@ -295,7 +311,7 @@ export class World extends EventDispatcher {
 		ctx.textBaseline = 'middle';
 
 		for(let i = 0; i < this.structures.length; i++) {
-			const { uid, pos, size, constructor } = this.structures[i];
+			const { uid, position: pos, size, constructor } = this.structures[i];
 
 			ctx.beginPath();
 
@@ -317,7 +333,7 @@ export class World extends EventDispatcher {
 		}
 
 		for(let i = 0; i < this.objects.length; i++) {
-			const { uid, pos, radius, constructor } = this.objects[i];
+			const { uid, position: pos, radius, constructor } = this.objects[i];
 
 			ctx.beginPath();
 			ctx.arc(pos.x, pos.y, radius, 0, Math.TAU);
@@ -341,7 +357,7 @@ export class World extends EventDispatcher {
 		}
 
 		for(let i = 0; i < this.items.length; i++) {
-			const { uid, pos, constructor } = this.items[i];
+			const { uid, position: pos, constructor } = this.items[i];
 
 			ctx.beginPath();
 			ctx.arc(pos.x, pos.y, 2, 0, Math.TAU);

@@ -1,5 +1,5 @@
 {
-	"name": "poker",
+	"name": "relax",
 	"private": true,
 	"version": "0.0.0",
 	"type": "module",
@@ -14,6 +14,7 @@
 		"vite-tsconfig-paths": "^3.6.0"
 	},
 	"dependencies": {
+		"@msgpack/msgpack": "^3.0.0-beta2",
 		"box2dweb": "^2.1.0-b"
 	}
 }
