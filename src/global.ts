@@ -1,3 +1,6 @@
+import '@/code';
+
+
 import { Vector2 } from '@ver/Vector2';
 import { EventDispatcher, Event } from '@ver/events';
 import { TouchesController, Touch } from '@ver/TouchesController';

@@ -1,4 +1,4 @@
-import { IUnit, Unit } from './Unit';
+import { Unit } from './Unit';
 import { Client } from './Client';
 
 

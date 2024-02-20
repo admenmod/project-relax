@@ -14,8 +14,8 @@ export type TYPE_ENUM = typeof TYPE_ENUM[keyof typeof TYPE_ENUM];
 export type PendingHandler = (error: any, result: any) => any;
 
 
-export interface Writable { write(buffer: ArrayBufferView): boolean; }
-export interface Readable extends AsyncIterable<ArrayLike<number>> {}
+export interface Writable<T = any> { write(buffer: T): Promise<void>; }
+export interface Readable<T = any> extends AsyncIterable<ArrayLike<T>> {}
 
 
 class Response {
@@ -23,7 +23,7 @@ class Response {
 
 	constructor(
 		private extensionCodec: ExtensionCodec,
-		private encoder: Writable,
+		private encoder: Writable<ArrayBufferView>,
 		private requestId: number
 	) {}
 
@@ -47,7 +47,10 @@ export declare namespace Transport {
 	export type Response = InstanceType<typeof Response>;
 }
 export class Transport extends EventDispatcher {
-	public '@attach' = new Event<Transport, [Writable, Readable]>(this);
+	public writer!: Writable<ArrayBufferView>;
+	public reader!: Readable<number>;
+
+	public '@attach' = new Event<Transport, [Writable<ArrayBufferView>, Readable<number>]>(this);
 	public '@detach' = new Event<Transport, []>(this);
 
 	public '@request' = new Event<Transport, [method: string, args: any[], response: Response]>(this);
@@ -56,8 +59,6 @@ export class Transport extends EventDispatcher {
 	protected nextRequestId: number = 0;
 	protected pending: Map<number, PendingHandler> = new Map();
 
-	public writer!: Writable;
-	public reader!: Readable;
 
 	protected readonly extensionCodec: ExtensionCodec = this.initializeExtensionCodec();
 
@@ -120,7 +121,7 @@ export class Transport extends EventDispatcher {
 		this.writer.write(this.encodeToBuffer([TYPE_ENUM.NOTIFICATION, method, args]));
 	}
 
-	public attach(writer: Writable, reader: Readable): this {
+	public attach(writer: Writable<ArrayBufferView>, reader: Readable<number>): this {
 		this.writer = writer;
 		this.reader = reader;
 

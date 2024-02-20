@@ -57,7 +57,7 @@ server.registerNotification('loaded', async () => {
 		}
 
 		ff = true;
-		server.request<'pong'>('ping').then(pong => ff = false);
+		server.request('ping').then(() => ff = false);
 	}, 5000);
 
 	await server.request('code', await loadFile('main.js'));

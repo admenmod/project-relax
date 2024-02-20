@@ -18,7 +18,7 @@ const client = attach();
 client.on('error', console.error);
 
 client.registerNotifications({
-	loop: () => mainModule?.loop()
+	loop: (data: typeof client.data) => (client.data = data) && mainModule?.loop()
 });
 
 client.registerRequests({

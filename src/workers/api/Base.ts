@@ -14,8 +14,6 @@ export class Base extends EventDispatcher {
 
 	public transport!: Transport;
 
-	protected _isReady!: Promise<boolean>;
-
 	protected notifications: Record<string, (...args: any[]) => any> = {};
 	protected requests: Record<string, (...args: any[]) => any> = {};
 

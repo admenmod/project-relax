@@ -1,9 +1,7 @@
 import { Vector2 } from '@ver/Vector2';
 import { Event } from '@ver/events';
 import type { Viewport } from '@ver/Viewport';
-import type { Touch } from '@ver/TouchesController';
 import { Node2D } from '@/scenes/nodes/Node2D';
-
 import { Input } from '@/global';
 
 
@@ -24,7 +22,10 @@ export class Button extends Node2D {
 
 		const fn = Input.on('press', tpos => {
 			const pos = this.globalPosition;
+			const rot = this.globalRotation;
 			const size = this.size;
+
+			tpos = tpos.buf().sub(pos).rotate(-rot).add(pos);
 
 			if(
 				tpos.x < pos.x + size.x/2 && tpos.x > pos.x - size.x/2 &&
@@ -32,16 +33,14 @@ export class Button extends Node2D {
 			) this['@pressed'].emit();
 		});
 
-		this.on('destroy', () => Input.off('press', fn));
+		this.once('destroy', () => Input.off('press', fn));
 	}
 
 	protected _process(dt: number): void {
 		;
 	}
 
-	protected _draw(viewport: Viewport): void {
-		const ctx = viewport.ctx;
-
+	protected _draw({ ctx }: Viewport): void {
 		ctx.beginPath();
 		ctx.fillStyle = this.style.background || '#222222';
 		ctx.fillRect(-this.size.x/2, -this.size.y/2, this.size.x, this.size.y);
@@ -56,7 +55,5 @@ export class Button extends Node2D {
 		ctx.textBaseline = 'middle';
 		ctx.font = `${this.style.fontSize || '15px'} ${this.style.fontFamily || 'arkhip,monospace'}`;
 		ctx.fillText(this._text, 0, 0);
-
-		ctx.restore();
 	}
 }

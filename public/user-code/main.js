@@ -1,27 +1,36 @@
-const { Event } = await require('events');
+/*
+ INFO: args, env, return, yield
+ HACK: input - args (local), (get?) env (global), yield (step)
+ HACK: outputs - return (main), yield (step), args.out (fn local), (set? - acc) env.out (fn global)
+ HACK: async-await
+
+args: {
+	__dirname, __filename,
+	meta: { import, url, env, resolve },
+	module: { exports, path, filename, require },
+	require: src => module & { cache: url }
+	exit(code)
+}
+
+api - this
+
+env - global - globalThis: {
+	fs,
+	console
+}
+*/
 
 
-const RULES_ENAM = {
-	HARVESTER: 'harvester'
-};
-
-console.log({ RULES_ENAM });
+const { Event } = await meta.import('events');
 
 
-module.exports = { aa: 33 };
+console.log('main start');
 
-module.exports.loop = async () => {
-	let list = await game.getUnitsInfo();
+console.log(Object.getOwnPropertyNames(global));
 
-	if(list.length) {
-		list[0].moveTo(new Vector2(2, 4));
-	}
+net.on('notification', (method, args) => console.log([method, ...args]));
+net.on('request', (method, args, responce) => console.log([method, ...args, String(responce)]));
 
-	// Game.spawns['Spawn1'].buildUnit([WORK, CARRY, MOVE], 'Harvester1', {
-	// 	memory: {
-	// 		rule: RULES_ENAM.HARVESTER
-	// 	}
-	// });
-	//
-	// Game.units['Harvester1'];
-};
+net.request('adsa', 'arg1', 'arg2', 'arg3', 'arg4');
+
+console.log('main end');

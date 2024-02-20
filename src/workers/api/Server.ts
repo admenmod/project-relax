@@ -1,31 +1,48 @@
 import { Event } from '@ver/events';
 import { Base } from './Base';
 import { PREFIX } from './Metadata';
+import type { IData } from './Client';
+import { Vector2 } from '@ver/Vector2';
 
 
 export class Server extends Base {
-	public '@run' = new Event<Server, []>(this);
 	public '@exit' = new Event<Server, [code: number]>(this);
 
 	constructor(public worker: Worker) { super(); }
 
-	public loop(): void { this.notify('loop'); }
+	public loop(data: IData) { return this.request<number>('loop', data); }
 
 	public registerCommands(listeners: Record<string, (...args: any[]) => any>) {
 		return this.registerRequests(listeners, PREFIX.COMMAND);
 	}
 
+	public registerState<IState, IData = IState>({ id, initialState, encode, decode }: {
+		id: string;
+		initialState: IState;
+		encode: (state: IState) => IData;
+		decode: (data: IData, state: IState) => IState | null | void;
+	}) {
+		let state: IState = initialState;
+
+		this['@notification'].on((method, [stateId, data]) => {
+			if(method !== 'syncState' || stateId !== id) return;
+
+			state = decode(data, state) ?? state;
+		}, -10);
+
+		return { id, get: () => state, sync: () => this.notify(`syncState`, id, encode(state)) };
+	}
+
 	public terminate(code: number = 0): void {
-		this.worker.terminate();
 		this['@exit'].emit(code);
+		this.worker.terminate();
 	}
 }
 
 
 export const attach = (worker: Worker) => new Server(worker).attach({
-	write(buffer) {
+	async write(buffer) {
 		worker.postMessage(buffer, { transfer: [buffer.buffer] });
-		return true;
 	}
 }, {
 	async *[Symbol.asyncIterator]() {
